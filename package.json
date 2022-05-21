@@ -1,0 +1,32 @@
+{
+  "name": "NUSIC-Metadata",
+  "version": "0.1.0",
+  "author": "logesh.r24@gmail.com",
+  "description": "Responsible for fetching chartmetric ids for provided spotify id and return spotify monthly listeners for the Artist",
+  "license": "MIT",
+  "scripts": {
+    "test": "./node_modules/.bin/_mocha --timeout 0",
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "axios": "^0.25.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.1.1",
+    "dotenv": "^10.0.0",
+    "ethers": "^5.5.4",
+    "express-fileupload": "^1.3.1",
+    "web3.storage": "^4.2.0"
+  },
+  "devDependencies": {
+    "body-parser": "^1.19.0",
+    "chai": "^4.2.0",
+    "eslint": "^7.0.0",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "express": "^4.17.0",
+    "mocha": "^7.1.2"
+  }
+}
