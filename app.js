@@ -24,20 +24,26 @@ app.get('/', (req, res) => {
 })
 
 app.post('/upload', async (req, res) => {
-  const buff = req.files.file.data
-  const filename = req.files.file.name
-  var wordArray = CryptoJS.lib.WordArray.create(buff) // Convert: ArrayBuffer -> WordArray
-  var encrypted = CryptoJS.AES.encrypt(wordArray, process.env.ENCRYPTION_KEY).toString() // Encryption: I: WordArray -> O: -> Base64 encoded string (OpenSSL-format)
-  const file = new File([encrypted], filename)
+  console.log('Request received')
+  const fileNames = Object.keys(req.files)
+  const encryptedFiles = fileNames.map(fileName => {
+    const buff = req.files[fileName].data
+    var wordArray = CryptoJS.lib.WordArray.create(buff) // Convert: ArrayBuffer -> WordArray
+    var encrypted = CryptoJS.AES.encrypt(wordArray, process.env.ENCRYPTION_KEY).toString() // Encryption: I: WordArray -> O: -> Base64 encoded string (OpenSSL-format)
+    const file = new File([encrypted], fileName)
+    return file
+  })
+  console.log('Files are Encrypted!')
   const storage = new Web3Storage({
     token: process.env.WEB3STORAGE_TOKEN
   })
-  const cid = await storage.put([file])
+  const cid = await storage.put(encryptedFiles)
   res.status(200).send({ message: 'File Uploaded', cid })
 })
 // buffer - wordArray - encrypt - string
 // string - decrypt - wordArray - buffer
 app.get('/cid/:id', async (req, res) => {
+  console.log('Request received')
   const storage = new Web3Storage({
     token: process.env.WEB3STORAGE_TOKEN
   })
@@ -48,15 +54,42 @@ app.get('/cid/:id', async (req, res) => {
   }
   // unpack File objects from the response
   const files = await response.files()
+  // TODO
   const file = files[0]
   const arrayBuffer = await file.arrayBuffer()
   const str = new TextDecoder().decode(arrayBuffer)
   var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
   const bff = CryptJsWordArrayToUint8Array(decryptedData)
   // TODO: Fix this
-  fs.writeFileSync('decripted.wav', bff)
-  res.sendFile('./decripted.wav', { root: __dirname })
-  fs.rm('decripted.wav', {}, () => {
+  fs.writeFileSync('decrypted.wav', bff)
+  res.sendFile('./decrypted.wav', { root: __dirname })
+  fs.rm('decrypted.wav', {}, () => {
+    console.log('removed')
+  })
+})
+
+app.get('/cid/:id/:name', async (req, res) => {
+  console.log('Request received')
+  const storage = new Web3Storage({
+    token: process.env.WEB3STORAGE_TOKEN
+  })
+  const response = await storage.get(req.params.id)
+  console.log(`Got a response! [${response.status}] ${response.statusText}`)
+  if (!response.ok) {
+    throw new Error(`failed to get ${req.params.id} - [${response.status}] ${response.statusText}`)
+  }
+  // unpack File objects from the response
+  const files = await response.files()
+  // TODO
+  const file = files.filter(file => file.name === req.params.name)[0]
+  const arrayBuffer = await file.arrayBuffer()
+  const str = new TextDecoder().decode(arrayBuffer)
+  var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
+  const bff = CryptJsWordArrayToUint8Array(decryptedData)
+  // TODO: Fix this
+  fs.writeFileSync('decrypted.wav', bff)
+  res.sendFile('./decrypted.wav', { root: __dirname })
+  fs.rm('decrypted.wav', {}, () => {
     console.log('removed')
   })
 })
