@@ -109,6 +109,70 @@ app.get('/cid/:id/:name', async (req, res) => {
   })
 })
 
+app.get('/stream/cid/:id', async (req, res) => {
+  console.log('Request received')
+  const storage = new Web3Storage({
+    token: process.env.WEB3STORAGE_TOKEN
+  })
+  const response = await storage.get(req.params.id)
+  console.log(`Got a response! [${response.status}] ${response.statusText}`)
+  if (!response.ok) {
+    throw new Error(`failed to get ${req.params.id} - [${response.status}] ${response.statusText}`)
+  }
+  // unpack File objects from the response
+  const files = await response.files()
+  // TODO
+  const file = files[0]
+  const arrayBuffer = await file.arrayBuffer()
+  const str = new TextDecoder().decode(arrayBuffer)
+  var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
+  const bff = CryptJsWordArrayToUint8Array(decryptedData)
+  // TODO: Fix this
+  fs.writeFileSync(file.name, bff)
+  // res.sendFile('./decrypted.wav', { root: __dirname })
+  res.header({
+    'Content-Type': 'audio/mpeg',
+    'Content-Length': bff.length
+  })
+  const readStream = fs.createReadStream(file.name)
+  readStream.pipe(res)
+  fs.rm(file.name, {}, () => {
+    console.log(`${file.name} removed`)
+  })
+})
+
+app.get('/stream/cid/:id/:name', async (req, res) => {
+  console.log('Request received')
+  const storage = new Web3Storage({
+    token: process.env.WEB3STORAGE_TOKEN
+  })
+  const response = await storage.get(req.params.id)
+  console.log(`Got a response! [${response.status}] ${response.statusText}`)
+  if (!response.ok) {
+    throw new Error(`failed to get ${req.params.id} - [${response.status}] ${response.statusText}`)
+  }
+  // unpack File objects from the response
+  const files = await response.files()
+  // TODO
+  const file = files.filter(file => file.name === req.params.name)[0] || files[0]
+  const arrayBuffer = await file.arrayBuffer()
+  const str = new TextDecoder().decode(arrayBuffer)
+  var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
+  const bff = CryptJsWordArrayToUint8Array(decryptedData)
+  // TODO: Fix this
+  fs.writeFileSync(file.name, bff)
+  // res.sendFile('./decrypted.wav', { root: __dirname })
+  res.header({
+    'Content-Type': 'audio/mpeg',
+    'Content-Length': bff.length
+  })
+  const readStream = fs.createReadStream(file.name)
+  readStream.pipe(res)
+  fs.rm(file.name, {}, () => {
+    console.log(`${file.name} removed`)
+  })
+})
+
 function CryptJsWordArrayToUint8Array(wordArray) {
   const l = wordArray.sigBytes
   const words = wordArray.words
@@ -131,6 +195,19 @@ function CryptJsWordArrayToUint8Array(wordArray) {
 }
 
 app.listen(port, () => console.log(`Listening on port ${port}!`))
+
+// const music = './master.wav'
+// var stat = fs.statSync(music)
+// res.header({
+//   'Content-Type': 'audio/mpeg',
+//   'Content-Length': stat.size
+// })
+// const readStream = fs.createReadStream(music)
+// // This will wait until we know the readable stream is actually valid before piping
+// readStream.on('open', function () {
+//   // This just pipes the read stream to the response object (which goes to the client)
+//   readStream.pipe(res)
+// })
 
 // --------------------------------------
 // app.post('/upload', async (req, res) => {
