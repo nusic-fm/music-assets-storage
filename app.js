@@ -127,6 +127,7 @@ app.get('/stream/cid/:id', async (req, res) => {
   const str = new TextDecoder().decode(arrayBuffer)
   var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
   const bff = CryptJsWordArrayToUint8Array(decryptedData)
+  console.log('Decrypted')
   // TODO: Fix this
   fs.writeFileSync(file.name, bff)
   // res.sendFile('./decrypted.wav', { root: __dirname })
@@ -134,8 +135,13 @@ app.get('/stream/cid/:id', async (req, res) => {
     'Content-Type': 'audio/mpeg',
     'Content-Length': bff.length
   })
+  console.log('Written to a file')
   const readStream = fs.createReadStream(file.name)
-  readStream.pipe(res)
+  readStream.on('open', function () {
+    console.log('stream opened')
+    // This just pipes the read stream to the response object (which goes to the client)
+    readStream.pipe(res)
+  })
   fs.rm(file.name, {}, () => {
     console.log(`${file.name} removed`)
   })
@@ -167,7 +173,10 @@ app.get('/stream/cid/:id/:name', async (req, res) => {
     'Content-Length': bff.length
   })
   const readStream = fs.createReadStream(file.name)
-  readStream.pipe(res)
+  readStream.on('open', function () {
+    // This just pipes the read stream to the response object (which goes to the client)
+    readStream.pipe(res)
+  })
   fs.rm(file.name, {}, () => {
     console.log(`${file.name} removed`)
   })
