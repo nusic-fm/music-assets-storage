@@ -121,26 +121,28 @@ app.get('/stream/cid/:id', async (req, res) => {
   }
   // unpack File objects from the response
   const files = await response.files()
-  // TODO
   const file = files[0]
   const arrayBuffer = await file.arrayBuffer()
+  console.log('Decryption initiated')
   const str = new TextDecoder().decode(arrayBuffer)
   var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
   const bff = CryptJsWordArrayToUint8Array(decryptedData)
   console.log('Decrypted')
-  // TODO: Fix this
   fs.writeFileSync(file.name, bff)
+  console.log(`${file.name} is written`)
   // res.sendFile('./decrypted.wav', { root: __dirname })
   res.header({
     'Content-Type': 'audio/mpeg',
     'Content-Length': bff.length
   })
-  console.log('Written to a file')
   const readStream = fs.createReadStream(file.name)
-  readStream.on('open', function () {
-    console.log('stream opened')
+  readStream.on('data', function (dataChunks) {
     // This just pipes the read stream to the response object (which goes to the client)
-    readStream.pipe(res)
+    res.write(dataChunks)
+  })
+  readStream.on('close', function () {
+    console.log('Readstream closed')
+    res.end()
   })
   fs.rm(file.name, {}, () => {
     console.log(`${file.name} removed`)
@@ -148,7 +150,6 @@ app.get('/stream/cid/:id', async (req, res) => {
 })
 
 app.get('/stream/cid/:id/:name', async (req, res) => {
-  console.log('Request received')
   const storage = new Web3Storage({
     token: process.env.WEB3STORAGE_TOKEN
   })
@@ -159,23 +160,28 @@ app.get('/stream/cid/:id/:name', async (req, res) => {
   }
   // unpack File objects from the response
   const files = await response.files()
-  // TODO
   const file = files.filter(file => file.name === req.params.name)[0] || files[0]
   const arrayBuffer = await file.arrayBuffer()
+  console.log('Decryption initiated')
   const str = new TextDecoder().decode(arrayBuffer)
   var decryptedData = CryptoJS.AES.decrypt(str, process.env.ENCRYPTION_KEY)
   const bff = CryptJsWordArrayToUint8Array(decryptedData)
-  // TODO: Fix this
+  console.log('Decrypted')
   fs.writeFileSync(file.name, bff)
+  console.log('File is written')
   // res.sendFile('./decrypted.wav', { root: __dirname })
   res.header({
     'Content-Type': 'audio/mpeg',
     'Content-Length': bff.length
   })
   const readStream = fs.createReadStream(file.name)
-  readStream.on('open', function () {
+  readStream.on('data', function (dataChunks) {
     // This just pipes the read stream to the response object (which goes to the client)
-    readStream.pipe(res)
+    res.write(dataChunks)
+  })
+  readStream.on('close', function () {
+    console.log('Readstream closed')
+    res.end()
   })
   fs.rm(file.name, {}, () => {
     console.log(`${file.name} removed`)
@@ -216,6 +222,15 @@ app.listen(port, () => console.log(`Listening on port ${port}!`))
 // readStream.on('open', function () {
 //   // This just pipes the read stream to the response object (which goes to the client)
 //   readStream.pipe(res)
+// })
+// // This will wait until we know the readable stream is actually valid before piping
+// readStream.on('data', function (dataChunks) {
+//   console.log('size : ' + dataChunks.length)
+//   // This just pipes the read stream to the response object (which goes to the client)
+//   res.write(dataChunks)
+// })
+// readStream.on('close', function () {
+//   res.end()
 // })
 
 // --------------------------------------
